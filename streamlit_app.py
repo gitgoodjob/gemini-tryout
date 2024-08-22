@@ -1,5 +1,6 @@
 import streamlit as st
-from transformers import pipeline
+from transformers import LlamaModel, LlamaConfig
+
 
 # Set up the Streamlit app
 st.title("LLaMA Chatbot")
@@ -13,7 +14,8 @@ with st.form("search_form"):
 model_info = st.empty()
 
 # Load the LLaMA model
-model = pipeline("text-generation", model="decapoda-research/llama-7b-hf")
+configuration = LlamaConfig()
+model = LlamaModel(configuration)
 
 # Function to generate text using the LLaMA model
 def generate_text(query):
