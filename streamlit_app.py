@@ -1,9 +1,14 @@
 import streamlit as st
 from transformers import LlamaModel, LlamaConfig
+import google.generativeai as genai
+import os
 
 
 # Set up the Streamlit app
 st.title("LLaMA Chatbot")
+with st.form("Enter API Key"):
+    API_KEY=st.text_input("Enter Gemini API Key")
+    
 
 # Create a form to input the search query
 with st.form("search_form"):
@@ -13,6 +18,7 @@ with st.form("search_form"):
 # Create a container to display the model information
 model_info = st.empty()
 
+genai.configure(api_key=os.environ["API_KEY"]
 # Load the LLaMA model
 configuration = LlamaConfig()
 model = LlamaModel(configuration)
