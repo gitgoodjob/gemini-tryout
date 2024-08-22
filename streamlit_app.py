@@ -21,12 +21,12 @@ if submit_api_key:
 with st.form("search_form"):
     search_query = st.text_input("Enter your search query")
     submit_search = st.form_submit_button("Search")
-
+model = genai.GenerativeModel("gemini-1.5-flash")
     # Main logic
     if submit_search:
         try:
             # Generating text using the Gemini model
-            response = genai.generate_content(prompt=search_query)
+            response = model.generate_content(prompt=search_query)
             st.write(print(response.text))
         except Exception as e:
             st.error(f"Error generating text: {str(e)}")
