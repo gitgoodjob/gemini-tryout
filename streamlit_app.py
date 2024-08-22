@@ -27,6 +27,6 @@ with st.form("search_form"):
         try:
             # Generating text using the Gemini model
             response = genai.generate_content(prompt=search_query)
-            st.write(response.text)
+            st.write(print(response.text))
         except Exception as e:
             st.error(f"Error generating text: {str(e)}")
