@@ -10,9 +10,12 @@ with st.form("Enter API Key"):
     submit_api_key = st.form_submit_button("Submit")
 
 if submit_api_key:
-    # Configure the Gemini API using the API key provided by the user
-    genai.configure(api_key=API_KEY)
-    st.success("API key configured successfully!")
+    try:
+        # Configure the Gemini API using the API key provided by the user
+        genai.configure(api_key=API_KEY)
+        st.success("API key configured successfully!")
+    except Exception as e:
+        st.error(f"Error configuring API key: {str(e)}")
 
 # Create a form to input the search query
 with st.form("search_form"):
@@ -22,6 +25,7 @@ with st.form("search_form"):
     # Main logic
     if submit_search:
         try:
+            # Generating text using the Gemini model
             response = genai.generate_text(prompt=search_query)
             st.write(response.result)
         except Exception as e:
