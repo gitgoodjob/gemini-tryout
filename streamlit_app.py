@@ -16,12 +16,12 @@ if submit_api_key:
         st.success("API key configured successfully!")
     except Exception as e:
         st.error(f"Error configuring API key: {str(e)}")
-
+model = genai.GenerativeModel("gemini-1.5-flash")
 # Create a form to input the search query
 with st.form("search_form"):
     search_query = st.text_input("Enter your search query")
     submit_search = st.form_submit_button("Search")
-model = genai.GenerativeModel("gemini-1.5-flash")
+
     # Main logic
     if submit_search:
         try:
