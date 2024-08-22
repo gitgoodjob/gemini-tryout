@@ -1,12 +1,8 @@
 import streamlit as st
-import torch
-from transformers import LLaMAForConditionalGeneration, LLaMATokenizer
+from transformers import pipeline
 
 # Set up the Streamlit app
 st.title("LLaMA Chatbot")
-
-# Create a form to input the API key (not required for LLaMA)
-# st.text_input("No API key required for LLaMA")
 
 # Create a form to input the search query
 with st.form("search_form"):
@@ -16,15 +12,12 @@ with st.form("search_form"):
 # Create a container to display the model information
 model_info = st.empty()
 
-# Load the LLaMA model and tokenizer
-model = LLaMAForConditionalGeneration.from_pretrained("decapoda-research/llama-7b-hf")
-tokenizer = LLaMATokenizer.from_pretrained("decapoda-research/llama-7b-hf")
+# Load the LLaMA model
+model = pipeline("text-generation", model="decapoda-research/llama-7b-hf")
 
 # Function to generate text using the LLaMA model
 def generate_text(query):
-    inputs = tokenizer(query, return_tensors="pt")
-    outputs = model.generate(**inputs, max_length=200)
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return model(query, max_length=200)[0]["generated_text"]
 
 # Main logic
 if submit_search:
@@ -33,4 +26,3 @@ if submit_search:
 
 # Display model information
 model_info.write("Model: LLaMA 7B")
-model_info.write("Tokenizer: LLaMATokenizer")
