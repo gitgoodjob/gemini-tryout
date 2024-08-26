@@ -1,10 +1,12 @@
 import streamlit as st
 import google.generativeai as genai
-import speech_recognition as sr
 from googletrans import Translator, LANGUAGES
 from gtts import gTTS
 import os
 import tempfile
+import base64
+import speech_recognition as sr
+from io import BytesIO
 
 # Set up the Streamlit app
 st.title("Multilingual Gemini Chatbot with Voice Support")
@@ -23,25 +25,8 @@ if submit_api_key:
 
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Initialize the speech recognizer and translator
-recognizer = sr.Recognizer()
+# Initialize the translator
 translator = Translator()
-
-# Function to perform speech recognition
-def speech_to_text(language_code):
-    with sr.Microphone() as source:
-        st.write("Listening... Speak now.")
-        audio = recognizer.listen(source)
-        st.write("Processing speech...")
-    try:
-        text = recognizer.recognize_google(audio, language=language_code)
-        return text
-    except sr.UnknownValueError:
-        st.error("Sorry, I couldn't understand the audio.")
-        return None
-    except sr.RequestError:
-        st.error("Sorry, there was an error processing your request.")
-        return None
 
 # Function to translate text
 def translate_text(text, target_language):
@@ -76,20 +61,104 @@ languages = {
 }
 selected_language = st.selectbox("Select language", list(languages.keys()))
 
+# Audio recording function
+def record_audio():
+    audio_bytes = st.session_state.get("audio_bytes", None)
+    if audio_bytes:
+        # Convert audio bytes to audio data
+        audio_data = BytesIO(audio_bytes)
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(audio_data) as source:
+            audio = recognizer.record(source)
+        try:
+            text = recognizer.recognize_google(audio, language=languages[selected_language])
+            return text
+        except sr.UnknownValueError:
+            st.error("Sorry, I couldn't understand the audio.")
+        except sr.RequestError:
+            st.error("Sorry, there was an error processing your request.")
+    return None
+
+# JavaScript for microphone access
+st.markdown("""
+<script>
+const toggleMic = () => {
+    const micElem = document.getElementById('micButton');
+    if (micElem.textContent === '🎙️ Start') {
+        micElem.textContent = '🎙️ Stop';
+        startRecording();
+    } else {
+        micElem.textContent = '🎙️ Start';
+        stopRecording();
+    }
+}
+
+let mediaRecorder;
+let audioChunks = [];
+
+const startRecording = () => {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.start();
+
+            mediaRecorder.addEventListener("dataavailable", event => {
+                audioChunks.push(event.data);
+            });
+        });
+}
+
+const stopRecording = () => {
+    mediaRecorder.stop();
+    mediaRecorder.addEventListener("stop", () => {
+        const audioBlob = new Blob(audioChunks);
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = () => {
+            const base64data = reader.result;
+            Streamlit.setComponentValue(base64data);
+        }
+        audioChunks = [];
+    });
+}
+
+const pushToTalk = (event) => {
+    if (event.type === 'mousedown' || event.type === 'touchstart') {
+        startRecording();
+    } else if (event.type === 'mouseup' || event.type === 'touchend') {
+        stopRecording();
+    }
+}
+</script>
+""", unsafe_allow_html=True)
+
+# Microphone toggle button
+st.markdown("""
+<button id="micButton" onclick="toggleMic()">🎙️ Start</button>
+""", unsafe_allow_html=True)
+
+# Push-to-talk button
+st.markdown("""
+<button id="pushToTalkButton" onmousedown="pushToTalk(event)" onmouseup="pushToTalk(event)" ontouchstart="pushToTalk(event)" ontouchend="pushToTalk(event)">🎙️ Push to Talk</button>
+""", unsafe_allow_html=True)
+
 # Create a form to input the search query
 with st.form("search_form"):
-    input_method = st.radio("Choose input method", ("Text", "Voice"))
-    if input_method == "Text":
-        search_query = st.text_input("Enter your search query")
-    else:
-        if st.form_submit_button("Start Voice Input"):
-            search_query = speech_to_text(languages[selected_language])
-            if search_query:
-                st.write(f"You said: {search_query}")
+    search_query = st.text_input("Enter your search query")
     submit_search = st.form_submit_button("Search")
 
+# Handle audio input
+audio_bytes = st.session_state.get("audio_bytes", None)
+if audio_bytes:
+    audio_base64 = audio_bytes.split(",")[1]
+    audio_data = base64.b64decode(audio_base64)
+    st.session_state.audio_bytes = audio_data
+    search_query = record_audio()
+    if search_query:
+        st.write(f"You said: {search_query}")
+
 # Main logic
-if submit_search and search_query:
+if submit_search or search_query:
     try:
         # Detect the language of the input query
         detected_lang, _ = translate_text(search_query, 'en')
