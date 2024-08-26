@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import speech_recognition as sr
-from googletrans import Translator
+from googletrans import Translator, LANGUAGES
 from gtts import gTTS
 import os
 import tempfile
@@ -45,15 +45,24 @@ def speech_to_text(language_code):
 
 # Function to translate text
 def translate_text(text, target_language):
-    translation = translator.translate(text, dest=target_language)
-    return translation.text
+    try:
+        detection = translator.detect(text)
+        translation = translator.translate(text, dest=target_language)
+        return detection.lang, translation.text
+    except Exception as e:
+        st.warning(f"Translation error: {str(e)}. Returning original text.")
+        return 'unknown', text
 
 # Function to convert text to speech
 def text_to_speech(text, language):
-    tts = gTTS(text=text, lang=language)
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-        tts.save(fp.name)
-        return fp.name
+    try:
+        tts = gTTS(text=text, lang=language)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
+            tts.save(fp.name)
+            return fp.name
+    except Exception as e:
+        st.warning(f"Text-to-speech error: {str(e)}. Audio output not available.")
+        return None
 
 # Language selection
 languages = {
@@ -82,9 +91,14 @@ with st.form("search_form"):
 # Main logic
 if submit_search and search_query:
     try:
+        # Detect the language of the input query
+        detected_lang, _ = translate_text(search_query, 'en')
+        st.info(f"Detected input language: {LANGUAGES.get(detected_lang, 'Unknown')}")
+
         # Translate query to English if not already in English
-        if selected_language != 'English':
-            english_query = translate_text(search_query, 'en')
+        if detected_lang != 'en':
+            _, english_query = translate_text(search_query, 'en')
+            st.info(f"Translated query to English: {english_query}")
         else:
             english_query = search_query
 
@@ -93,7 +107,8 @@ if submit_search and search_query:
 
         # Translate response back to selected language if not English
         if selected_language != 'English':
-            translated_response = translate_text(response.text, languages[selected_language])
+            _, translated_response = translate_text(response.text, languages[selected_language])
+            st.info(f"Translated response to {selected_language}")
         else:
             translated_response = response.text
 
@@ -103,10 +118,10 @@ if submit_search and search_query:
 
         # Generate audio for the response
         audio_file = text_to_speech(translated_response, languages[selected_language])
-        st.audio(audio_file)
-
-        # Clean up the temporary audio file
-        os.unlink(audio_file)
+        if audio_file:
+            st.audio(audio_file)
+            # Clean up the temporary audio file
+            os.unlink(audio_file)
 
     except Exception as e:
         st.error(f"Error generating or translating text: {str(e)}")
