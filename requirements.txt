@@ -1,6 +1,5 @@
-streamlit
-transformers
-google-generativeai
-tempfile
-os
-gtts
+streamlit 
+google-generativeai 
+SpeechRecognition 
+googletrans==3.1.0a0 
+gTTS
