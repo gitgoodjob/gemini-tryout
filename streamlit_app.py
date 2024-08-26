@@ -62,7 +62,8 @@ languages = {
     'French': 'fr',
     'German': 'de',
     'Chinese': 'zh-cn',
-    'Hindi': 'hi'
+    'Hindi': 'hi',
+    'Sanskrit': 'sa'
 }
 selected_language = st.selectbox("Select language", list(languages.keys()))
 
